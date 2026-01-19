@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facto - Web Compiler</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+    
+    <!-- App Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="logo-text">Facto</span>
+                </div>
+                <span class="tagline">Write code. Get Factorio circuits.</span>
+            </div>
+            <div class="header-right">
+                <a href="https://github.com/Snagnar/Factompiler" target="_blank" class="header-link">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                    GitHub
+                </a>
+                <a href="https://github.com/Snagnar/Factompiler/blob/main/LANGUAGE_SPEC.md" target="_blank" class="header-link">
+                    Docs
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel: Editor -->
+            <div class="panel editor-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                            <polyline points="16 18 22 12 16 6"></polyline>
+                            <polyline points="8 6 2 12 8 18"></polyline>
+                        </svg>
+                        Source Code
+                    </h2>
+                    <div class="panel-actions">
+                        <button id="load-example" class="btn btn-small btn-secondary" title="Load example">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            Example
+                        </button>
+                        <button id="clear-editor" class="btn btn-small btn-secondary" title="Clear editor">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="editor-container">
+                    <textarea id="code-editor"></textarea>
+                </div>
+            </div>
+
+            <!-- Center: Controls -->
+            <div class="controls-panel">
+                <!-- Compiler Options -->
+                <div class="options-section">
+                    <h3 class="options-title">Compiler Options</h3>
+                    
+                    <div class="option-group">
+                        <label class="option-label" for="blueprint-name">Blueprint Name</label>
+                        <input type="text" id="blueprint-name" class="option-input" placeholder="My Circuit" maxlength="100">
+                    </div>
+                    
+                    <div class="option-group">
+                        <label class="option-label" for="power-poles">Power Poles</label>
+                        <select id="power-poles" class="option-select">
+                            <option value="">None</option>
+                            <option value="small">Small</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="big">Big</option>
+                            <option value="substation">Substation</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label class="option-label" for="log-level">Log Level</label>
+                        <select id="log-level" class="option-select">
+                            <option value="error">Error</option>
+                            <option value="warning">Warning</option>
+                            <option value="info" selected>Info</option>
+                            <option value="debug">Debug</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group option-checkbox">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="no-optimize">
+                            <span class="checkbox-custom"></span>
+                            Disable Optimizations
+                        </label>
+                    </div>
+                    
+                    <div class="option-group option-checkbox">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="json-output">
+                            <span class="checkbox-custom"></span>
+                            JSON Output
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Compile Button -->
+                <button id="compile-btn" class="btn btn-primary btn-compile">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span class="btn-text">Compile</span>
+                    <div class="btn-spinner" hidden>
+                        <div class="spinner"></div>
+                    </div>
+                </button>
+                
+                <div class="keyboard-hint">
+                    <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
+                </div>
+            </div>
+
+            <!-- Right Panel: Output -->
+            <div class="panel output-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        Output
+                    </h2>
+                    <div class="panel-tabs">
+                        <button class="tab-btn active" data-tab="log">Log</button>
+                        <button class="tab-btn" data-tab="blueprint">Blueprint</button>
+                    </div>
+                </div>
+                
+                <div class="output-content">
+                    <!-- Log Tab -->
+                    <div class="output-tab active" id="log-tab">
+                        <div class="log-container" id="log-output">
+                            <div class="log-placeholder">
+                                Compilation output will appear here...
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Blueprint Tab -->
+                    <div class="output-tab" id="blueprint-tab">
+                        <div class="blueprint-container">
+                            <div class="blueprint-status" id="blueprint-status">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                                </svg>
+                                <p>No blueprint generated yet</p>
+                                <p class="text-muted">Compile your code to generate a blueprint</p>
+                            </div>
+                            <div class="blueprint-output" id="blueprint-output" hidden>
+                                <textarea id="blueprint-text" readonly></textarea>
+                                <div class="blueprint-actions">
+                                    <button id="copy-blueprint" class="btn btn-secondary">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                        Copy Blueprint
+                                    </button>
+                                    <button id="download-blueprint" class="btn btn-secondary">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="7 10 12 15 17 10"></polyline>
+                                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                                        </svg>
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>Facto Compiler v2.5</span>
+            <span class="separator">•</span>
+            <span>Powered by <a href="https://github.com/redruin1/factorio-draftsman" target="_blank">factorio-draftsman</a></span>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+    
+    <script src="js/editor.js"></script>
+    <script src="js/compiler.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

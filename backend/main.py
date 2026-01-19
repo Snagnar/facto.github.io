@@ -1,0 +1,144 @@
+"""FastAPI application for the Facto web compiler."""
+
+import json
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, JSONResponse
+from pydantic import BaseModel, Field
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+from config import get_settings
+from rate_limiter import limiter, rate_limit_exceeded_handler
+from compiler_service import compile_facto, CompilerOptions, OutputType
+
+settings = get_settings()
+
+# Create FastAPI app
+app = FastAPI(
+    title="Facto Web Compiler",
+    description="Web API for compiling Facto code to Factorio blueprints",
+    version="1.0.0"
+)
+
+# Add rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+# Configure CORS
+origins = [origin.strip() for origin in settings.allowed_origins.split(",")]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+    max_age=86400,  # Cache preflight for 24 hours
+)
+
+
+class CompileRequest(BaseModel):
+    """Request body for compilation."""
+    source: str = Field(..., max_length=50000, description="Facto source code")
+    power_poles: str | None = Field(None, pattern="^(small|medium|big|substation)$")
+    blueprint_name: str | None = Field(None, max_length=100)
+    no_optimize: bool = False
+    json_output: bool = False
+    log_level: str = Field("info", pattern="^(debug|info|warning|error)$")
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "facto-compiler"}
+
+
+@app.post("/compile")
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}seconds")
+async def compile_code(request: Request, body: CompileRequest):
+    """
+    Compile Facto code and stream the output.
+    
+    Returns a Server-Sent Events stream with compilation progress and results.
+    """
+    options = CompilerOptions(
+        power_poles=body.power_poles,
+        name=body.blueprint_name,
+        no_optimize=body.no_optimize,
+        json_output=body.json_output,
+        log_level=body.log_level
+    )
+    
+    async def event_generator():
+        """Generate SSE events from compiler output."""
+        async for output_type, content in compile_facto(body.source, options):
+            # Format as SSE
+            event_data = json.dumps({
+                "type": output_type.value,
+                "content": content
+            })
+            yield f"data: {event_data}\n\n"
+        
+        # Send end event
+        yield f"data: {json.dumps({'type': 'end', 'content': ''})}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # Disable nginx buffering
+        }
+    )
+
+
+@app.post("/compile/sync")
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}seconds")
+async def compile_code_sync(request: Request, body: CompileRequest):
+    """
+    Compile Facto code and return all results at once.
+    
+    Alternative to streaming for clients that don't support SSE.
+    """
+    options = CompilerOptions(
+        power_poles=body.power_poles,
+        name=body.blueprint_name,
+        no_optimize=body.no_optimize,
+        json_output=body.json_output,
+        log_level=body.log_level
+    )
+    
+    logs = []
+    blueprint = None
+    errors = []
+    status = None
+    
+    async for output_type, content in compile_facto(body.source, options):
+        if output_type == OutputType.LOG:
+            logs.append(content)
+        elif output_type == OutputType.BLUEPRINT:
+            blueprint = content
+        elif output_type == OutputType.ERROR:
+            errors.append(content)
+        elif output_type == OutputType.STATUS:
+            status = content
+    
+    return {
+        "success": blueprint is not None,
+        "status": status,
+        "logs": logs,
+        "blueprint": blueprint,
+        "errors": errors
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=False,
+        log_level="info"
+    )
