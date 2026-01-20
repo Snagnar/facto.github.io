@@ -139,12 +139,17 @@ async def compile_facto(
             yield (OutputType.LOG, f"Running: {' '.join(cmd)}")
             
             # Run compiler with timeout
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=os.path.dirname(source_path)
-            )
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=os.path.dirname(source_path)
+                )
+            except FileNotFoundError:
+                yield (OutputType.ERROR, f"Compiler not found: '{settings.facto_compiler_path}' is not installed or not in PATH")
+                yield (OutputType.ERROR, "Install factompile: pip install factompile")
+                return
             
             # Collect output with timeout
             try:

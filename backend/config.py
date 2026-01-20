@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     
-    # CORS - comma-separated list of allowed origins
-    allowed_origins: str = "https://yourusername.github.io,http://localhost:3000"
+    # CORS - comma-separated list of allowed origins (use * for local development)
+    allowed_origins: str = "*"
     
     # Rate limiting
     rate_limit_requests: int = 30  # requests per window

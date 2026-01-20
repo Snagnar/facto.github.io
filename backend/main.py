@@ -26,7 +26,10 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Configure CORS
-origins = [origin.strip() for origin in settings.allowed_origins.split(",")]
+if settings.allowed_origins == "*":
+    origins = ["*"]
+else:
+    origins = [origin.strip() for origin in settings.allowed_origins.split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

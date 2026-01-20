@@ -5,8 +5,8 @@
 // Configuration
 const CONFIG = {
   // Change this to your backend URL
-  backendUrl: 'https://your-vps-domain.com',
-  // backendUrl: 'http://localhost:8000',  // For local development
+//   backendUrl: 'https://your-vps-domain.com',
+  backendUrl: 'http://localhost:8000',  // For local development
   
   endpoints: {
     compile: '/compile',

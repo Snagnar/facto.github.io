@@ -33,6 +33,8 @@
   let isCompiling = false;
   let currentExampleIndex = 0;
   const exampleKeys = Object.keys(window.FactoEditor.examples);
+  let serverConnected = false;
+  let healthCheckInterval = null;
   
   /**
    * Initialize the application
@@ -47,8 +49,8 @@
     // Bind event listeners
     bindEvents();
     
-    // Check backend health
-    checkBackendHealth();
+    // Start health checks
+    startHealthChecks();
   }
   
   /**
@@ -88,12 +90,72 @@
   }
   
   /**
+   * Update connection status indicator
+   */
+  function updateConnectionStatus(status) {
+    const statusDot = document.querySelector('.status-dot');
+    const statusEl = document.getElementById('connection-status');
+    
+    statusDot.className = 'status-dot';
+    
+    if (status === 'connected') {
+      statusDot.classList.add('connected');
+      statusEl.title = 'Server connected';
+      serverConnected = true;
+    } else if (status === 'connecting') {
+      statusDot.classList.add('connecting');
+      statusEl.title = 'Connecting to server...';
+      serverConnected = false;
+    } else {
+      statusDot.classList.add('disconnected');
+      statusEl.title = 'Server disconnected';
+      serverConnected = false;
+    }
+  }
+  
+  /**
    * Check if backend is healthy
    */
-  async function checkBackendHealth() {
+  async function checkBackendHealth(showNotification = false) {
+    updateConnectionStatus('connecting');
+    
     const isHealthy = await window.FactoCompiler.checkHealth();
-    if (!isHealthy) {
-      showToast('Backend server is not responding. Compilation may not work.', 'error');
+    
+    if (isHealthy) {
+      updateConnectionStatus('connected');
+      if (showNotification) {
+        showToast('Connected to server', 'success');
+      }
+    } else {
+      updateConnectionStatus('disconnected');
+      if (showNotification) {
+        showToast('Backend server is not responding. Check if server is running.', 'error');
+      }
+    }
+    
+    return isHealthy;
+  }
+  
+  /**
+   * Start periodic health checks
+   */
+  function startHealthChecks() {
+    // Initial check
+    checkBackendHealth(false);
+    
+    // Check every 10 seconds
+    healthCheckInterval = setInterval(() => {
+      checkBackendHealth(false);
+    }, 10000);
+  }
+  
+  /**
+   * Stop periodic health checks
+   */
+  function stopHealthChecks() {
+    if (healthCheckInterval) {
+      clearInterval(healthCheckInterval);
+      healthCheckInterval = null;
     }
   }
   
@@ -102,6 +164,15 @@
    */
   async function handleCompile() {
     if (isCompiling) return;
+    
+    // Check server connection
+    if (!serverConnected) {
+      showToast('Server not connected. Checking connection...', 'error');
+      const isHealthy = await checkBackendHealth(true);
+      if (!isHealthy) {
+        return;
+      }
+    }
     
     const source = editor.getValue().trim();
     
@@ -126,21 +197,35 @@
     switchTab('log');
     
     // Compile with streaming
-    await window.FactoCompiler.compileWithStreaming(source, options, {
-      onLog: (message) => appendLog(message, 'info'),
-      onBlueprint: (blueprint) => setBlueprint(blueprint),
-      onError: (error) => appendLog(error, 'error'),
-      onStatus: (status) => appendLog(status, 'status'),
-      onComplete: () => {
-        setCompiling(false);
-        
-        // Auto-switch to blueprint tab if successful
-        if (elements.blueprintText.value) {
-          switchTab('blueprint');
-          showToast('Compilation successful! Blueprint ready to copy.', 'success');
+    try {
+      await window.FactoCompiler.compileWithStreaming(source, options, {
+        onLog: (message) => appendLog(message, 'info'),
+        onBlueprint: (blueprint) => setBlueprint(blueprint),
+        onError: (error) => {
+          appendLog(error, 'error');
+          // Check if server connection lost
+          if (error.includes('Failed to fetch') || error.includes('NetworkError')) {
+            updateConnectionStatus('disconnected');
+            checkBackendHealth(false);
+          }
+        },
+        onStatus: (status) => appendLog(status, 'status'),
+        onComplete: () => {
+          setCompiling(false);
+          
+          // Auto-switch to blueprint tab if successful
+          if (elements.blueprintText.value) {
+            switchTab('blueprint');
+            showToast('Compilation successful! Blueprint ready to copy.', 'success');
+          }
         }
-      }
-    });
+      });
+    } catch (error) {
+      // Ensure we always stop the spinner even if there's an unexpected error
+      setCompiling(false);
+      appendLog(`Unexpected error: ${error.message}`, 'error');
+      showToast('Compilation failed. Check the log for details.', 'error');
+    }
   }
   
   /**
@@ -306,4 +391,9 @@
   } else {
     init();
   }
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    stopHealthChecks();
+  });
 })();
