@@ -1,4 +1,7 @@
 __pycache__
 .venv
 .env
-*.yaml
+
+# Only exclude stats data, not all yaml files
+backend/data/
+backend/stats.yaml

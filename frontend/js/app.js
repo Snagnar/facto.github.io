@@ -426,14 +426,20 @@
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     
-    const icon = type === 'success' 
+    // Create icon span with safe innerHTML (hardcoded SVGs)
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'toast-icon';
+    iconSpan.innerHTML = type === 'success' 
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="20 6 9 17 4 12"></polyline></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
     
-    toast.innerHTML = `
-      <span class="toast-icon">${icon}</span>
-      <span class="toast-message">${message}</span>
-    `;
+    // Create message span with textContent (safe - escapes HTML)
+    const messageSpan = document.createElement('span');
+    messageSpan.className = 'toast-message';
+    messageSpan.textContent = message;
+    
+    toast.appendChild(iconSpan);
+    toast.appendChild(messageSpan);
     
     elements.toastContainer.appendChild(toast);
     

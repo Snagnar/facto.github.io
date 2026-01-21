@@ -11,6 +11,10 @@ import yaml
 # How many recent compilation times to keep for statistics
 MAX_RECENT_TIMES = 100
 
+# Default stats file location (in data/ subdirectory)
+DEFAULT_STATS_DIR = Path(__file__).parent / "data"
+DEFAULT_STATS_FILE = DEFAULT_STATS_DIR / "stats.yaml"
+
 
 class Stats:
     """
@@ -18,8 +22,15 @@ class Stats:
     Thread-safe for async operations.
     """
 
-    def __init__(self, stats_file: str = "stats.yaml"):
-        self._file_path = Path(stats_file)
+    def __init__(self, stats_file: Path | str | None = None):
+        if stats_file is None:
+            stats_file = DEFAULT_STATS_FILE
+
+        self._file_path = Path(stats_file).resolve()
+
+        # Ensure parent directory exists
+        self._file_path.parent.mkdir(parents=True, exist_ok=True)
+
         self._lock = asyncio.Lock()
         self._data: dict[str, Any] = self._load_or_init()
 

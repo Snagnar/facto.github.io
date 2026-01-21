@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facto - Web Compiler</title>
     
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' https://cdnjs.cloudflare.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
+        font-src https://fonts.gstatic.com;
+        img-src 'self' data:;
+        connect-src 'self' http://localhost:8000 https://facto.spokenrobot.com:3000 https://*.github.io wss://*;
+    ">
+    
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     
@@ -19,6 +29,9 @@
     
     <!-- App Styles -->
     <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Backend Configuration -->
+    <script src="js/config.js"></script>
 </head>
 <body>
     <div class="app-container">

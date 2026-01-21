@@ -3,10 +3,17 @@
  */
 
 // Configuration
+// Backend URL can be set via window.FACTO_BACKEND_URL before loading this script
+// In index.html: <script>window.FACTO_BACKEND_URL = 'https://your-backend.com';</script>
 const CONFIG = {
-  // Change this to your backend URL
-//   backendUrl: 'https://your-vps-domain.com',
-  backendUrl: 'http://localhost:8000',  // For local development
+  // Auto-detect backend URL:
+  // 1. Use window.FACTO_BACKEND_URL if set
+  // 2. Use localhost for local development
+  // 3. Production should set FACTO_BACKEND_URL in index.html
+  backendUrl: window.FACTO_BACKEND_URL || 
+              (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:8000'
+                : ''),  // Must be configured in production
   
   endpoints: {
     compile: '/compile',

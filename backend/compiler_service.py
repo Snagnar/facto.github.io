@@ -35,6 +35,39 @@ class CompilerOptions:
     json_output: bool = False
     log_level: str = "info"  # debug, info, warning, error
 
+    def __post_init__(self):
+        """Validate and sanitize options after initialization."""
+        # Validate log level
+        valid_log_levels = {"debug", "info", "warning", "error"}
+        if self.log_level not in valid_log_levels:
+            self.log_level = "info"
+
+        # Validate power poles
+        valid_poles = {None, "small", "medium", "big", "substation"}
+        if self.power_poles not in valid_poles:
+            self.power_poles = None
+
+        # Sanitize blueprint name
+        if self.name is not None:
+            self.name = sanitize_blueprint_name(self.name)
+
+
+def sanitize_blueprint_name(name: str | None) -> str | None:
+    """
+    Sanitize blueprint name to only allow safe characters.
+    Prevents command injection and path traversal.
+    """
+    if name is None:
+        return None
+
+    # Only allow alphanumeric, spaces, hyphens, underscores
+    sanitized = re.sub(r"[^a-zA-Z0-9\s\-_]", "", name)
+
+    # Trim and limit length
+    sanitized = sanitized.strip()[:100]
+
+    return sanitized if sanitized else None
+
 
 # ==================== Compilation Queue ====================
 
@@ -45,16 +78,22 @@ class CompilationQueue:
     Tracks queue position for waiting clients.
     """
 
-    def __init__(self):
+    def __init__(self, max_size: int = 10):
         self._lock = asyncio.Lock()
         self._queue: list[str] = []  # List of request IDs in queue
         self._current: str | None = None  # Currently compiling request ID
         self._events: dict[str, asyncio.Event] = {}  # Events for each waiting request
+        self._max_size = max_size
 
     @property
     def queue_length(self) -> int:
         """Number of requests waiting in queue (not including current)."""
         return len(self._queue)
+
+    @property
+    def is_full(self) -> bool:
+        """Check if queue is at capacity."""
+        return len(self._queue) >= self._max_size
 
     def get_position(self, request_id: str) -> int:
         """Get position in queue (0 = currently compiling, 1+ = waiting)."""
@@ -67,9 +106,10 @@ class CompilationQueue:
 
     async def acquire(
         self, request_id: str, position_callback: Callable[[int], None] | None = None
-    ) -> bool:
+    ) -> tuple[bool, str | None]:
         """
-        Wait for turn to compile. Returns True when acquired.
+        Wait for turn to compile.
+        Returns (True, None) when acquired, (False, error_message) on failure.
         position_callback is called with queue position updates.
         """
         event = asyncio.Event()
@@ -78,7 +118,11 @@ class CompilationQueue:
             # If nothing is compiling and queue is empty, start immediately
             if self._current is None and len(self._queue) == 0:
                 self._current = request_id
-                return True
+                return True, None
+
+            # Check queue capacity
+            if len(self._queue) >= self._max_size:
+                return False, "Server is busy. Please try again later."
 
             # Add to queue
             self._queue.append(request_id)
@@ -101,11 +145,11 @@ class CompilationQueue:
                 if pos == 0:
                     break  # We're up!
                 if pos == -1:
-                    return False  # Somehow removed from queue
+                    return False, "Removed from queue"
                 if position_callback:
                     position_callback(pos)
 
-        return True
+        return True, None
 
     async def release(self, request_id: str):
         """Release the compilation slot and notify next in queue."""
@@ -134,7 +178,7 @@ _compilation_queue: CompilationQueue | None = None
 def get_compilation_queue() -> CompilationQueue:
     global _compilation_queue
     if _compilation_queue is None:
-        _compilation_queue = CompilationQueue()
+        _compilation_queue = CompilationQueue(max_size=settings.max_queue_size)
     return _compilation_queue
 
 
@@ -143,28 +187,37 @@ def sanitize_source(source: str) -> str:
     Sanitize source code to prevent injection attacks.
     Returns cleaned source or raises ValueError.
     """
+    if not source or not source.strip():
+        raise ValueError("Source code cannot be empty")
+
     if len(source) > settings.max_source_length:
         raise ValueError(
             f"Source code exceeds maximum length of {settings.max_source_length} characters"
         )
 
-    # Remove any null bytes
-    source = source.replace("\x00", "")
+    # Remove null bytes and control characters (except newline, carriage return, tab)
+    source = "".join(
+        char
+        for char in source
+        if char in "\n\r\t" or (ord(char) >= 32 and ord(char) != 127)
+    )
 
     # Check for suspicious patterns (shell injection attempts)
+    # These patterns could be dangerous if the source somehow gets shell-evaluated
     suspicious_patterns = [
-        r"`[^`]*`",  # Backtick command substitution
-        r"\$\([^)]*\)",  # $() command substitution
-        r"\$\{[^}]*\}",  # ${} variable expansion (could be malicious)
-        r";\s*rm\s",  # rm commands
-        r";\s*cat\s",  # cat commands attempting to read files
-        r"\|\s*sh\b",  # Piping to shell
-        r"\|\s*bash\b",  # Piping to bash
+        (r"`[^`]*`", "backtick command substitution"),
+        (r"\$\([^)]*\)", "$() command substitution"),
+        (r"\$\{[^}]*\}", "${} variable expansion"),
+        (r";\s*(rm|cat|wget|curl|nc|bash|sh|python|perl|ruby|php)\s", "shell command"),
+        (r"\|\s*(sh|bash|zsh|python|perl|ruby)\b", "pipe to shell"),
+        (r">\s*/", "redirect to absolute path"),
+        (r"\.\./", "path traversal"),
+        (r"[&|;]\s*[&|]", "command chaining"),
     ]
 
-    for pattern in suspicious_patterns:
+    for pattern, description in suspicious_patterns:
         if re.search(pattern, source, re.IGNORECASE):
-            raise ValueError("Source contains potentially malicious content")
+            raise ValueError(f"Source contains potentially malicious content")
 
     return source
 
@@ -225,19 +278,29 @@ async def compile_facto(
             queue.acquire(request_id, on_position_update)
         )
 
-        # Wait for slot with periodic position updates
+        # Wait for slot with periodic position updates and overall timeout
+        start_wait = time.perf_counter()
         while not acquire_task.done():
             try:
                 await asyncio.wait_for(asyncio.shield(acquire_task), timeout=1.0)
             except asyncio.TimeoutError:
+                # Check overall queue timeout
+                if time.perf_counter() - start_wait > settings.queue_timeout:
+                    await queue.release(request_id)
+                    yield (
+                        OutputType.ERROR,
+                        "Queue timeout. Server is very busy. Please try again later.",
+                    )
+                    return
                 # Yield any position updates
                 while position_updates:
                     pos = position_updates.pop(0)
                     yield (OutputType.QUEUE, str(pos))
                     yield (OutputType.STATUS, f"Waiting in queue (position {pos})...")
 
-        if not acquire_task.result():
-            yield (OutputType.ERROR, "Failed to acquire compilation slot")
+        success, error_msg = acquire_task.result()
+        if not success:
+            yield (OutputType.ERROR, error_msg or "Failed to acquire compilation slot")
             return
 
     except asyncio.TimeoutError:
@@ -283,7 +346,12 @@ async def compile_facto(
         try:
             # Build command
             cmd = build_compiler_command(source_path, output_path, options)
-            yield (OutputType.LOG, f"Running: {' '.join(cmd)}")
+
+            # In debug mode, show full command; in production, hide internal paths
+            if settings.debug_mode:
+                yield (OutputType.LOG, f"Running: {' '.join(cmd)}")
+            else:
+                yield (OutputType.LOG, "Starting compilation...")
 
             # Run compiler with timeout
             try:
@@ -294,11 +362,11 @@ async def compile_facto(
                     cwd=os.path.dirname(source_path),
                 )
             except FileNotFoundError:
+                # Don't expose internal paths in production
                 yield (
                     OutputType.ERROR,
-                    f"Compiler not found: '{settings.facto_compiler_path}' is not installed or not in PATH",
+                    "Compiler not found. Please contact the administrator.",
                 )
-                yield (OutputType.ERROR, "Install factompile: pip install factompile")
                 return
 
             # Collect output with timeout
@@ -313,6 +381,9 @@ async def compile_facto(
                             if not line:
                                 break
                             decoded = line.decode("utf-8", errors="replace").rstrip()
+                            # Sanitize output to hide internal paths
+                            decoded = decoded.replace(source_path, "[source]")
+                            decoded = decoded.replace(output_path, "[output]")
                             stderr_data.append(decoded)
                             yield (OutputType.LOG, decoded)
 
@@ -329,7 +400,10 @@ async def compile_facto(
                                 if blueprint:
                                     yield (OutputType.BLUEPRINT, blueprint)
                         except FileNotFoundError:
-                            yield (OutputType.ERROR, "Blueprint output file not found")
+                            yield (
+                                OutputType.ERROR,
+                                "Compilation failed: no output generated",
+                            )
                             compilation_success = False
                     else:
                         yield (

@@ -1,12 +1,12 @@
 """FastAPI application for the Facto web compiler."""
 
 import json
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from config import get_settings
 from rate_limiter import limiter, rate_limit_exceeded_handler
@@ -19,12 +19,50 @@ from stats import get_stats
 
 settings = get_settings()
 
+
+# ==================== Security Middleware ====================
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+
+        # Prevent clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+
+        # Prevent MIME type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # XSS protection (legacy but still useful for older browsers)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Referrer policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Permissions policy - disable unnecessary browser features
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=()"
+        )
+
+        return response
+
+
+# ==================== Application Setup ====================
+
 # Create FastAPI app
 app = FastAPI(
     title="Facto Web Compiler",
     description="Web API for compiling Facto code to Factorio blueprints",
     version="1.0.0",
+    # Disable API docs in production if debug_mode is False
+    docs_url="/docs" if settings.debug_mode else None,
+    redoc_url="/redoc" if settings.debug_mode else None,
 )
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Add rate limiter
 app.state.limiter = limiter
@@ -45,6 +83,9 @@ app.add_middleware(
 )
 
 
+# ==================== Request Models ====================
+
+
 class CompileRequest(BaseModel):
     """Request body for compilation."""
 
@@ -54,6 +95,9 @@ class CompileRequest(BaseModel):
     no_optimize: bool = False
     json_output: bool = False
     log_level: str = Field("info", pattern="^(debug|info|warning|error)$")
+
+
+# ==================== Routes ====================
 
 
 @app.get("/health")
