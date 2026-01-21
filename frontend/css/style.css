@@ -933,7 +933,7 @@ kbd {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 12px;
-    padding: 12px 8px; /* Reduced padding, closer to edges */
+    padding: 12px 0px; /* Reduced padding, closer to edges */
     border-left: none;
     border-right: none;
     border-top: 1px solid var(--border-color);
