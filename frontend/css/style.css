@@ -65,6 +65,14 @@ html, body {
   overflow: hidden;
 }
 
+/* Mobile: allow scrolling */
+@media (max-width: 768px) {
+  html, body {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
@@ -81,6 +89,15 @@ body {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+}
+
+/* Mobile: allow container to scroll */
+@media (max-width: 768px) {
+  .app-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
 }
 
 /* ===== Header ===== */
@@ -850,6 +867,8 @@ kbd {
 }
 
 /* ===== Responsive ===== */
+
+/* Tablet (med-large screens) */
 @media (max-width: 1200px) {
   .tagline {
     display: none;
@@ -860,31 +879,322 @@ kbd {
   }
 }
 
+/* Tablet/Mobile transition */
 @media (max-width: 900px) {
+  .header-right {
+    gap: 8px;
+  }
+  
+  /* Keep "Backend:" label visible, only hide on small phones */
+  
+  .header-separator {
+    display: none;
+  }
+  
+  /* Replace "GitHub" text with just icon */
+  .header-link svg {
+    margin-right: 0;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  /* Stack layout vertically */
   .main-content {
     flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
   
-  .editor-panel,
-  .output-panel {
+  /* Editor panel - expands to fit content */
+  .editor-panel {
     flex: none;
-    height: 40%;
+    height: auto;
+    min-height: 300px;
+    max-height: none; /* Allow expansion */
   }
   
+  .editor-container {
+    height: auto !important;
+    min-height: 300px;
+    max-height: none;
+  }
+  
+  /* CodeMirror should auto-grow */
+  .CodeMirror {
+    height: auto !important;
+    min-height: 300px;
+  }
+  
+  /* Controls - full width, horizontal layout */
   .controls-panel {
     width: 100%;
     flex-direction: row;
-    gap: 16px;
-    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 8px; /* Reduced padding, closer to edges */
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
   }
   
+  /* Options in two columns */
   .options-section {
     flex: 1;
+    min-width: 100%;
+    margin-bottom: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px; /* Reduced gap */
+  }
+  
+  .options-title {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    margin-bottom: 2px; /* Reduced margin */
+  }
+  
+  .option-group {
     margin-bottom: 0;
   }
   
+  .option-checkbox {
+    grid-column: 1 / -1;
+    margin: 0; /* Remove all margin */
+  }
+  
+  /* Reduce checkbox spacing significantly */
+  .option-checkbox .checkbox-label {
+    padding: 4px 0; /* Minimal padding */
+    min-height: 36px; /* Smaller but still tappable */
+  }
+  
+  /* Compile button - full width below options */
   .btn-compile {
-    width: auto;
-    flex-shrink: 0;
+    width: 100%;
+    min-width: 100%;
+    order: 10;
+    padding: 14px;
+  }
+  
+  /* Hide keyboard hint on mobile - doesn't make sense */
+  .keyboard-hint {
+    display: none;
+  }
+  
+  /* Output panel - scrollable */
+  .output-panel {
+    flex: 1;
+    min-height: 300px;
+    height: auto;
+  }
+  
+  .output-content {
+    height: auto;
+    min-height: 300px;
+    max-height: none;
+  }
+  
+  .log-container,
+  .blueprint-container {
+    height: auto;
+    min-height: 280px;
+  }
+  
+  /* Ensure blueprint is visible */
+  .blueprint-container {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .blueprint-output textarea {
+    min-height: 200px;
+    flex: 1;
+  }
+  
+  /* Make tabs easier to tap */
+  .panel-tabs .tab-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  
+  /* Larger touch targets for buttons */
+  .btn {
+    min-height: 44px;
+  }
+  
+  .btn-small {
+    min-height: 36px;
+    padding: 6px 12px;
+  }
+  
+  /* Header adjustments */
+  .header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--header-height);
+    padding: 8px 12px;
+  }
+  
+  .header-left,
+  .header-right {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  /* Show only icons in header links on mobile, except Docs */
+  .header-link {
+    font-size: 0; /* Hide text */
+    padding: 8px;
+  }
+  
+  .header-link:last-child {
+    font-size: 12px; /* Keep "Docs" text visible */
+    padding: 6px 10px;
+  }
+  
+  .header-link svg {
+    display: block; /* Ensure SVG shows */
+    width: 20px;
+    height: 20px;
+    margin: 0;
+  }
+  
+  .header-link:last-child svg {
+    display: none; /* Docs doesn't have an icon */
+  }
+  
+  /* Footer */
+  .footer {
+    font-size: 10px;
+    padding: 10px 12px;
+    height: auto; /* Allow footer to expand */
+    min-height: var(--footer-height);
+    flex-wrap: wrap; /* Wrap items on multiple lines */
+    justify-content: center;
+    line-height: 1.6;
+  }
+  
+  .footer .separator {
+    margin: 0 4px;
+  }
+  
+  /* Make footer items wrap nicely */
+  .footer > span {
+    white-space: nowrap;
   }
 }
+
+/* Very small mobile */
+@media (max-width: 480px) {
+  /* Single column options on very small screens */
+  .options-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .option-checkbox {
+    grid-column: 1;
+  }
+  
+  /* Smaller header */
+  .logo-text {
+    font-size: 14px;
+  }
+  
+  .header-link {
+    padding: 6px 8px;
+  }
+  
+  /* Show only icons, hide text */
+  .header-link {
+    font-size: 0; /* Hide text */
+  }
+  
+  .header-link svg {
+    display: block; /* Keep icon */
+    margin: 0;
+  }
+  
+  /* Stack header items */
+  .header {
+    gap: 8px;
+  }
+  
+  .header-left {
+    flex: 0 0 auto;
+  }
+  
+  .header-right {
+    flex: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  
+  /* Footer stacks vertically on tiny screens */
+  .footer {
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+    padding: 12px;
+  }
+  
+  .footer .separator {
+    display: none;
+  }
+  
+  .footer > span {
+    display: block;
+    width: 100%;
+  }
+}
+
+/* Landscape mobile - different approach */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+  .editor-container {
+    height: 35vh !important;
+    min-height: 200px;
+  }
+  
+  .output-content {
+    min-height: 35vh;
+  }
+  
+  .controls-panel {
+    padding: 12px;
+  }
+  
+  .options-section {
+    gap: 8px;
+  }
+  
+  .btn-compile {
+    padding: 10px;
+  }
+}
+
+/* Touch-friendly improvements for all mobile */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger tap targets */
+  .option-select,
+  .option-input {
+    min-height: 44px;
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+  
+  .checkbox-label {
+    min-height: 44px;
+    padding: 12px 0;
+  }
+  
+  /* Better touch feedback */
+  .btn:active {
+    transform: scale(0.98);
+  }
+  
+  .tab-btn:active {
+    transform: scale(0.95);
+  }
+}
+
