@@ -12,7 +12,7 @@
     btnText: document.querySelector('.btn-text'),
     btnIcon: document.querySelector('.btn-icon'),
     btnSpinner: document.querySelector('.btn-spinner'),
-    loadExampleBtn: document.getElementById('load-example'),
+    exampleSelect: document.getElementById('example-select'),
     clearEditorBtn: document.getElementById('clear-editor'),
     blueprintName: document.getElementById('blueprint-name'),
     powerPoles: document.getElementById('power-poles'),
@@ -26,20 +26,20 @@
     copyBlueprint: document.getElementById('copy-blueprint'),
     downloadBlueprint: document.getElementById('download-blueprint'),
     tabBtns: document.querySelectorAll('.tab-btn'),
-    toastContainer: document.getElementById('toast-container')
+    toastContainer: document.getElementById('toast-container'),
+    statusIndicator: document.getElementById('status-indicator'),
+    statusDot: document.querySelector('#status-indicator .status-dot')
   };
   
   // State
   let isCompiling = false;
-  let currentExampleIndex = 0;
-  const exampleKeys = Object.keys(window.FactoEditor.examples);
   let serverConnected = false;
   let healthCheckInterval = null;
   
   /**
    * Initialize the application
    */
-  function init() {
+  async function init() {
     // Initialize CodeMirror editor
     editor = window.FactoEditor.init('code-editor');
     
@@ -48,6 +48,9 @@
     
     // Bind event listeners
     bindEvents();
+    
+    // Populate example dropdown with built-in examples
+    populateExampleDropdown();
     
     // Start health checks
     startHealthChecks();
@@ -68,8 +71,8 @@
       }
     });
     
-    // Load example button
-    elements.loadExampleBtn.addEventListener('click', loadNextExample);
+    // Example select dropdown
+    elements.exampleSelect.addEventListener('change', handleExampleSelect);
     
     // Clear editor button
     elements.clearEditorBtn.addEventListener('click', () => {
@@ -93,22 +96,24 @@
    * Update connection status indicator
    */
   function updateConnectionStatus(status) {
-    const statusDot = document.querySelector('.status-dot');
-    const statusEl = document.getElementById('connection-status');
+    const statusDot = elements.statusDot;
+    const statusIndicator = elements.statusIndicator;
+    
+    if (!statusDot || !statusIndicator) return;
     
     statusDot.className = 'status-dot';
     
     if (status === 'connected') {
       statusDot.classList.add('connected');
-      statusEl.title = 'Server connected';
+      statusIndicator.title = 'Backend connected';
       serverConnected = true;
     } else if (status === 'connecting') {
       statusDot.classList.add('connecting');
-      statusEl.title = 'Connecting to server...';
+      statusIndicator.title = 'Connecting to backend...';
       serverConnected = false;
     } else {
       statusDot.classList.add('disconnected');
-      statusEl.title = 'Server disconnected';
+      statusIndicator.title = 'Backend disconnected';
       serverConnected = false;
     }
   }
@@ -116,13 +121,17 @@
   /**
    * Check if backend is healthy
    */
-  async function checkBackendHealth(showNotification = false) {
+  async function checkBackendHealth(showNotification = false, recordSession = false) {
     updateConnectionStatus('connecting');
     
     const isHealthy = await window.FactoCompiler.checkHealth();
     
     if (isHealthy) {
       updateConnectionStatus('connected');
+      if (recordSession) {
+        // Record the session visit (only on first successful connect)
+        await window.FactoCompiler.connect();
+      }
       if (showNotification) {
         showToast('Connected to server', 'success');
       }
@@ -140,12 +149,12 @@
    * Start periodic health checks
    */
   function startHealthChecks() {
-    // Initial check
-    checkBackendHealth(false);
+    // Initial check with session recording
+    checkBackendHealth(false, true);
     
-    // Check every 10 seconds
+    // Check every 10 seconds (no session recording)
     healthCheckInterval = setInterval(() => {
-      checkBackendHealth(false);
+      checkBackendHealth(false, false);
     }, 10000);
   }
   
@@ -197,11 +206,13 @@
     switchTab('log');
     
     // Compile with streaming
+    let hasError = false;
     try {
       await window.FactoCompiler.compileWithStreaming(source, options, {
         onLog: (message) => appendLog(message, 'info'),
         onBlueprint: (blueprint) => setBlueprint(blueprint),
         onError: (error) => {
+          hasError = true;
           appendLog(error, 'error');
           // Check if server connection lost
           if (error.includes('Failed to fetch') || error.includes('NetworkError')) {
@@ -210,19 +221,26 @@
           }
         },
         onStatus: (status) => appendLog(status, 'status'),
+        onQueue: (position) => {
+          updateQueueDisplay(parseInt(position, 10));
+        },
         onComplete: () => {
           setCompiling(false);
+          hideQueueDisplay();
           
           // Auto-switch to blueprint tab if successful
           if (elements.blueprintText.value) {
             switchTab('blueprint');
             showToast('Compilation successful! Blueprint ready to copy.', 'success');
+          } else if (hasError) {
+            showToast('Compilation failed. Check the log for details.', 'error');
           }
         }
       });
     } catch (error) {
       // Ensure we always stop the spinner even if there's an unexpected error
       setCompiling(false);
+      hideQueueDisplay();
       appendLog(`Unexpected error: ${error.message}`, 'error');
       showToast('Compilation failed. Check the log for details.', 'error');
     }
@@ -234,9 +252,26 @@
   function setCompiling(compiling) {
     isCompiling = compiling;
     elements.compileBtn.disabled = compiling;
+    elements.compileBtn.classList.toggle('compiling', compiling);
     elements.btnText.textContent = compiling ? 'Compiling...' : 'Compile';
-    elements.btnIcon.hidden = compiling;
-    elements.btnSpinner.hidden = !compiling;
+  }
+  
+  /**
+   * Update queue display in compile button
+   */
+  function updateQueueDisplay(position) {
+    if (position > 0) {
+      elements.btnText.textContent = `Queue: ${position}`;
+    } else {
+      elements.btnText.textContent = 'Compiling...';
+    }
+  }
+  
+  /**
+   * Hide queue display
+   */
+  function hideQueueDisplay() {
+    // Reset handled by setCompiling
   }
   
   /**
@@ -270,8 +305,8 @@
    */
   function clearBlueprint() {
     elements.blueprintText.value = '';
-    elements.blueprintStatus.hidden = false;
-    elements.blueprintOutput.hidden = true;
+    elements.blueprintStatus.classList.remove('hidden');
+    elements.blueprintOutput.classList.remove('visible');
   }
   
   /**
@@ -279,8 +314,8 @@
    */
   function setBlueprint(blueprint) {
     elements.blueprintText.value = blueprint;
-    elements.blueprintStatus.hidden = true;
-    elements.blueprintOutput.hidden = false;
+    elements.blueprintStatus.classList.add('hidden');
+    elements.blueprintOutput.classList.add('visible');
   }
   
   /**
@@ -349,14 +384,39 @@
   }
   
   /**
-   * Load next example program
+   * Populate example dropdown with built-in examples
    */
-  function loadNextExample() {
-    const key = exampleKeys[currentExampleIndex];
-    editor.setValue(window.FactoEditor.examples[key]);
-    currentExampleIndex = (currentExampleIndex + 1) % exampleKeys.length;
+  function populateExampleDropdown() {
+    // Clear existing options except first
+    while (elements.exampleSelect.options.length > 1) {
+      elements.exampleSelect.remove(1);
+    }
     
-    showToast(`Loaded example: ${key}`, 'success');
+    const exampleKeys = Object.keys(window.FactoEditor.examples);
+    exampleKeys.forEach(key => {
+      const option = document.createElement('option');
+      option.value = key;
+      // Format name: camelCase -> Title Case
+      option.textContent = key.replace(/([A-Z])/g, ' $1').trim();
+      option.textContent = option.textContent.charAt(0).toUpperCase() + option.textContent.slice(1);
+      elements.exampleSelect.appendChild(option);
+    });
+  }
+  
+  /**
+   * Handle example selection from dropdown
+   */
+  function handleExampleSelect(e) {
+    const value = e.target.value;
+    if (!value) return;
+    
+    const code = window.FactoEditor.examples[value];
+    if (code) {
+      editor.setValue(code);
+      const displayName = value.replace(/([A-Z])/g, ' $1').trim();
+      showToast(`Loaded: ${displayName}`, 'success');
+    }
+    // Keep the selected value to show which example is loaded
   }
   
   /**

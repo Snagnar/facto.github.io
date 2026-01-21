@@ -104,19 +104,74 @@ function initEditor(elementId) {
   return editor;
 }
 
-// Example programs
+// Example programs - curated from Factompiler examples
 const EXAMPLE_PROGRAMS = {
-  blinker: `# Blinking lamp - A simple counter-controlled lamp
+  blinker: `# Blinking Lamp - A simple counter-controlled lamp
+# Demonstrates: Memory, basic arithmetic, entity control
+
 Memory counter: "signal-A";
-counter.write((counter.read() + 1) % 60);
+Signal step_size = 1;
+
+counter.write((counter.read() + step_size) % 60);
 
 Signal blink = counter.read() < 30;
 
 Entity lamp = place("small-lamp", 0, 0);
 lamp.enable = blink;`,
 
-  rgbCycle: `# RGB Color Cycling Display
-# A 3x3 lamp grid that cycles through all colors
+  binaryClock: `# 8-Bit Binary Clock
+# Demonstrates: Memory, loops conceptually, bit manipulation
+
+Memory counter;
+
+counter.write((counter.read() + 1) % 256);
+
+lamp0 = place("small-lamp", 0, 0);
+lamp1 = place("small-lamp", 1, 0);
+lamp2 = place("small-lamp", 2, 0);
+lamp3 = place("small-lamp", 3, 0);
+lamp4 = place("small-lamp", 4, 0);
+lamp5 = place("small-lamp", 5, 0);
+lamp6 = place("small-lamp", 6, 0);
+lamp7 = place("small-lamp", 7, 0);
+
+lamp0.enable = (counter.read() % 2) >= 1;
+lamp1.enable = (counter.read() % 4) >= 2;
+lamp2.enable = (counter.read() % 8) >= 4;
+lamp3.enable = (counter.read() % 16) >= 8;
+lamp4.enable = (counter.read() % 32) >= 16;
+lamp5.enable = (counter.read() % 64) >= 32;
+lamp6.enable = (counter.read() % 128) >= 64;
+lamp7.enable = (counter.read() % 256) >= 128;`,
+
+  forLoop: `# For Loop - Create lamps in a row
+# Demonstrates: for loops, entity placement
+
+Signal sig = ("signal-A", 1);
+
+for i in 0..5 {
+    Entity lamp = place("small-lamp", i, 0);
+    lamp.enable = sig > 0;
+}`,
+
+  basicArithmetic: `# Basic Arithmetic Operations
+# Demonstrates: Signal types, arithmetic, type projection
+
+Signal a = 100;               # implicit type
+Signal b = 200;               
+Signal c = ("iron-plate", 50); # explicit type
+
+Signal sum = a + b;
+Signal diff = c - 10;
+Signal quotient = c / 3;
+Signal remainder = b % 5;
+
+# Output with explicit type projection
+Signal output_val = sum | "signal-output";
+Signal output_new_type = (a + b + c) | "copper-plate";`,
+
+  rgbColorCycle: `# HSV Color Cycling Lamp
+# Demonstrates: Functions, math, RGB lamps
 
 Memory hue: "signal-H";
 hue.write((hue.read() + 1) % 1530);

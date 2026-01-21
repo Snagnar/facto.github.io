@@ -11,7 +11,8 @@ const CONFIG = {
   endpoints: {
     compile: '/compile',
     compileSync: '/compile/sync',
-    health: '/health'
+    health: '/health',
+    connect: '/connect'
   }
 };
 
@@ -19,7 +20,7 @@ const CONFIG = {
  * Compile Facto code using Server-Sent Events (streaming)
  */
 async function compileWithStreaming(source, options, callbacks) {
-  const { onLog, onBlueprint, onError, onStatus, onComplete } = callbacks;
+  const { onLog, onBlueprint, onError, onStatus, onQueue, onComplete } = callbacks;
   
   const requestBody = {
     source: source,
@@ -28,6 +29,14 @@ async function compileWithStreaming(source, options, callbacks) {
     no_optimize: options.noOptimize || false,
     json_output: options.jsonOutput || false,
     log_level: options.logLevel || 'info'
+  };
+  
+  let completeCalled = false;
+  const callComplete = () => {
+    if (!completeCalled) {
+      completeCalled = true;
+      onComplete?.();
+    }
   };
   
   try {
@@ -82,8 +91,11 @@ async function compileWithStreaming(source, options, callbacks) {
               case 'status':
                 onStatus?.(event.content);
                 break;
+              case 'queue':
+                onQueue?.(event.content);
+                break;
               case 'end':
-                onComplete?.();
+                callComplete();
                 break;
             }
           } catch (e) {
@@ -93,11 +105,11 @@ async function compileWithStreaming(source, options, callbacks) {
       }
     }
     
-    onComplete?.();
+    callComplete();
     
   } catch (error) {
     onError?.(error.message);
-    onComplete?.();
+    callComplete();
   }
 }
 
@@ -145,10 +157,26 @@ async function checkHealth() {
   }
 }
 
+/**
+ * Record a session connection with the backend
+ */
+async function connect() {
+  try {
+    const response = await fetch(`${CONFIG.backendUrl}${CONFIG.endpoints.connect}`, {
+      method: 'POST',
+      mode: 'cors'
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 // Export for use in other modules
 window.FactoCompiler = {
   config: CONFIG,
   compileWithStreaming,
   compileSync,
-  checkHealth
+  checkHealth,
+  connect
 };

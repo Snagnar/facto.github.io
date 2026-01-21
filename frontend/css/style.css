@@ -1,35 +1,36 @@
 /* ===== CSS Variables ===== */
 :root {
-  /* Backgrounds - Pure dark, no noise */
-  --bg-darkest: #09090b;
-  --bg-dark: #0c0c0e;
-  --bg-medium: #18181b;
-  --bg-light: #27272a;
-  --bg-lighter: #3f3f46;
+  /* Backgrounds - Warm dark greys (Factorio-inspired) */
+  --bg-darkest: #1a1a1a;
+  --bg-dark: #212121;
+  --bg-medium: #2a2a2a;
+  --bg-light: #363636;
+  --bg-lighter: #454545;
   
-  /* Primary - Subtle cyan/teal accent */
-  --primary: #22d3ee;
-  --primary-hover: #67e8f9;
-  --primary-dark: #06b6d4;
-  --primary-glow: rgba(34, 211, 238, 0.15);
+  /* Primary - Factorio yellow/orange */
+  --primary: #f5a623;
+  --primary-hover: #ffbe45;
+  --primary-dark: #e09000;
+  --primary-glow: rgba(245, 166, 35, 0.2);
   
   /* Accents */
-  --accent-green: #34d399;
-  --accent-green-dark: #10b981;
-  --accent-red: #f87171;
-  --accent-red-dark: #ef4444;
-  --accent-blue: #60a5fa;
-  --accent-yellow: #fbbf24;
-  --accent-purple: #a78bfa;
+  --accent-green: #7cb342;
+  --accent-green-dark: #558b2f;
+  --accent-red: #e57373;
+  --accent-red-dark: #d32f2f;
+  --accent-blue: #64b5f6;
+  --accent-yellow: #f5a623;
+  --accent-purple: #ba68c8;
+  --accent-orange: #ff8f00;
   
-  /* Text - High contrast */
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted: #52525b;
+  /* Text - Warm tones */
+  --text-primary: #f5f5f5;
+  --text-secondary: #b0b0b0;
+  --text-muted: #6b6b6b;
   
-  /* Borders - Subtle */
-  --border-color: #27272a;
-  --border-highlight: #22d3ee;
+  /* Borders - Subtle warm */
+  --border-color: #3a3a3a;
+  --border-highlight: #f5a623;
   
   /* Shadows - Minimal */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -132,11 +133,58 @@ body {
   gap: 4px;
 }
 
+.backend-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.status-label {
+  font-weight: 500;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  cursor: help;
+}
+
+.status-indicator .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: all var(--transition-normal);
+}
+
+.status-indicator .status-dot.connected {
+  background: var(--accent-green);
+  box-shadow: 0 0 10px rgba(124, 179, 66, 0.6);
+}
+
+.status-indicator .status-dot.connecting {
+  background: var(--accent-yellow);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-indicator .status-dot.disconnected {
+  background: var(--accent-red);
+  box-shadow: 0 0 8px rgba(229, 115, 115, 0.5);
+}
+
+.header-separator {
+  color: var(--text-muted);
+  margin: 0 8px;
+}
+
 .header-link {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-decoration: none;
   font-size: 12px;
   font-weight: 500;
@@ -146,7 +194,7 @@ body {
 }
 
 .header-link:hover {
-  color: var(--text-primary);
+  color: var(--primary);
   background: var(--bg-light);
 }
 
@@ -210,6 +258,18 @@ body {
 .panel-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+.example-dropdown {
+  position: relative;
+}
+
+.example-select {
+  min-width: 150px;
+  padding: 5px 28px 5px 10px !important;
+  font-size: 11px !important;
+  cursor: pointer;
 }
 
 /* ===== Editor ===== */
@@ -238,29 +298,29 @@ body {
 }
 
 .CodeMirror-activeline-background {
-  background: rgba(34, 211, 238, 0.03) !important;
+  background: rgba(245, 166, 35, 0.05) !important;
 }
 
 .CodeMirror-selected {
-  background: rgba(34, 211, 238, 0.15) !important;
+  background: rgba(245, 166, 35, 0.15) !important;
 }
 
 .CodeMirror-cursor {
   border-left: 2px solid var(--primary) !important;
 }
 
-/* Syntax highlighting - VS Code inspired */
-.cm-s-facto .cm-keyword { color: var(--accent-purple); font-weight: 400; }
-.cm-s-facto .cm-type { color: var(--primary); }
+/* Syntax highlighting - Factorio-inspired */
+.cm-s-facto .cm-keyword { color: var(--primary); font-weight: 500; }
+.cm-s-facto .cm-type { color: var(--accent-orange); }
 .cm-s-facto .cm-variable { color: var(--text-primary); }
-.cm-s-facto .cm-variable-2 { color: #7dd3fc; }
+.cm-s-facto .cm-variable-2 { color: #90caf9; }
 .cm-s-facto .cm-string { color: var(--accent-green); }
 .cm-s-facto .cm-string-2 { color: var(--accent-green); }
-.cm-s-facto .cm-number { color: #fcd34d; }
+.cm-s-facto .cm-number { color: #ffcc80; }
 .cm-s-facto .cm-comment { color: var(--text-muted); font-style: italic; }
 .cm-s-facto .cm-operator { color: var(--text-secondary); }
-.cm-s-facto .cm-builtin { color: #f0abfc; }
-.cm-s-facto .cm-property { color: #7dd3fc; }
+.cm-s-facto .cm-builtin { color: #ce93d8; }
+.cm-s-facto .cm-property { color: #90caf9; }
 .cm-s-facto .cm-punctuation { color: var(--text-muted); }
 .cm-s-facto .cm-bracket { color: var(--text-secondary); }
 .cm-s-facto .cm-error { color: var(--accent-red); }
@@ -456,6 +516,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.01em;
   position: relative;
+  gap: 10px;
 }
 
 .btn-compile .btn-icon {
@@ -463,13 +524,16 @@ body {
   height: 16px;
 }
 
-.connection-status {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+.btn-compile .btn-spinner {
+  display: none;
+}
+
+.btn-compile.compiling .btn-icon {
+  display: none;
+}
+
+.btn-compile.compiling .btn-spinner {
   display: flex;
-  align-items: center;
 }
 
 .status-dot {
@@ -482,7 +546,7 @@ body {
 
 .status-dot.connected {
   background: var(--accent-green);
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
+  box-shadow: 0 0 8px rgba(124, 179, 66, 0.5);
 }
 
 .status-dot.connecting {
@@ -646,6 +710,10 @@ kbd {
   color: var(--text-muted);
 }
 
+.blueprint-status.hidden {
+  display: none;
+}
+
 .blueprint-status svg {
   margin-bottom: 16px;
   opacity: 0.3;
@@ -657,9 +725,13 @@ kbd {
 
 .blueprint-output {
   flex: 1;
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 12px;
+}
+
+.blueprint-output.visible {
+  display: flex;
 }
 
 .blueprint-output textarea {
@@ -709,9 +781,11 @@ kbd {
 .footer a {
   color: var(--primary);
   text-decoration: none;
+  transition: color var(--transition-fast);
 }
 
 .footer a:hover {
+  color: var(--primary-hover);
   text-decoration: underline;
 }
 
