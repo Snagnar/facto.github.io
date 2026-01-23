@@ -29,8 +29,8 @@ class Settings(BaseSettings):
     max_concurrent_compilations: int = 1  # Queue ensures single compilation
 
     # Queue settings
-    max_queue_size: int = 10  # Maximum pending compilations
-    queue_timeout: int = 120  # Max time to wait in queue (seconds)
+    max_queue_size: int = 100  # Maximum pending compilations
+    queue_timeout: int = 500  # Max time to wait in queue (seconds)
 
     # Facto compiler path (adjust to your installation)
     facto_compiler_path: str = "factompile"
