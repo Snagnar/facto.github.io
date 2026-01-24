@@ -39,6 +39,7 @@ import yaml
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
+TELEGRAM_AVAILABLE = True
 
 class StatsMonitor:
     """Monitor stats file and detect anomalies."""
