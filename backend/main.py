@@ -217,9 +217,48 @@ async def compile_code_sync(request: Request, body: CompileRequest):
     }
 
 
+# ==================== Stats Server ====================
+
+# Create a separate minimal app for serving stats
+stats_app = FastAPI(
+    title="Facto Stats Server",
+    description="Internal stats endpoint",
+    docs_url=None,
+    redoc_url=None,
+)
+
+
+@stats_app.get("/stats")
+async def get_stats_endpoint():
+    """Return current statistics."""
+    stats = get_stats()
+    return stats.get_stats()
+
+
+@stats_app.get("/health")
+async def stats_health_check():
+    """Health check for stats server."""
+    return {"status": "ok", "service": "stats"}
+
+
 if __name__ == "__main__":
     import uvicorn
+    import threading
 
+    # Start stats server in a separate thread
+    def run_stats_server():
+        uvicorn.run(
+            stats_app,
+            host=settings.host,
+            port=settings.stats_port,
+            log_level="warning",
+        )
+
+    stats_thread = threading.Thread(target=run_stats_server, daemon=True)
+    stats_thread.start()
+    logger.info(f"Stats server starting on {settings.host}:{settings.stats_port}")
+
+    # Run main server on main thread
     uvicorn.run(
         "main:app",
         host=settings.host,

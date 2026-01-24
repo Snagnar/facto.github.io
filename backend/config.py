@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 3000
+    stats_port: int = 4000  # Separate port for stats endpoint
 
     # CORS - comma-separated list of allowed origins
     # In production, set FACTO_ALLOWED_ORIGINS to your actual frontend domain
