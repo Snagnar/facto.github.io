@@ -19,26 +19,44 @@ import aiohttp
 
 # Sample Facto code for testing
 SAMPLE_FACTO_CODE = """
-// Simple test program
-function main() {
-    let x = 5;
-    let y = 10;
-    return x + y;
-}
+Memory counter: "signal-A";
+Signal step_size = 1;
+
+counter.write((counter.read() + step_size) % 60);
+
+Signal blink = counter.read() < 30;
+
+Entity lamp = place("small-lamp", 0, 0);
+lamp.enable = blink;
 """
 
 COMPLEX_FACTO_CODE = """
-// More complex test program
-function fibonacci(n) {
-    if (n <= 1) {
-        return n;
-    }
-    return fibonacci(n - 1) + fibonacci(n - 2);
-}
+Memory hue: "signal-H";
+hue.write((hue.read() + 1) % 1530);
 
-function main() {
-    let result = fibonacci(10);
-    return result;
+Signal h = hue.read();
+Signal sector = h / 255;
+Signal pos = h % 255;
+
+# HSV to RGB conversion
+Signal r = ((sector == 0 || sector == 5) : 255)
+         + ((sector == 1) : (255 - pos))
+         + ((sector == 4) : pos);
+Signal g = ((sector == 0) : pos)
+         + ((sector == 1 || sector == 2) : 255)
+         + ((sector == 3) : (255 - pos));
+Signal b = ((sector == 2) : pos)
+         + ((sector == 3 || sector == 4) : 255)
+         + ((sector == 5) : (255 - pos));
+
+for y in 0..3 {
+    for x in 0..3 {
+        Entity lamp = place("small-lamp", x, y, 
+            {use_colors: 1, always_on: 1, color_mode: 1});
+        lamp.r = r | "signal-red";
+        lamp.g = g | "signal-green";
+        lamp.b = b | "signal-blue";
+    }
 }
 """
 
