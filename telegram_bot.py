@@ -41,6 +41,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 TELEGRAM_AVAILABLE = True
 
+
 class StatsMonitor:
     """Monitor stats file and detect anomalies."""
 
@@ -51,11 +52,11 @@ class StatsMonitor:
 
         # Alert thresholds
         self.thresholds = {
-            "requests_per_minute": 100,  # Alert if > 100 req/min
+            "requests_per_minute": 150,  # Alert if > 150 req/min
             "compilation_jump": 50,  # Alert if compilations jump by > 50
             "success_rate_drop": 20,  # Alert if success rate drops > 20%
             "avg_time_spike": 10,  # Alert if avg time increases > 10s            'queue_length': 10,  # Alert if queue length > 10
-            'avg_total_time_spike': 15,  # Alert if total time > 15s            "alert_cooldown": 300,  # Min seconds between same alert type
+            "avg_total_time_spike": 15,  # Alert if total time > 15s            "alert_cooldown": 300,  # Min seconds between same alert type
             "queue_length": 10,  # Alert if queue length > 10
             "alert_cooldown": 300,  # Min seconds between same alert type
         }
@@ -140,12 +141,12 @@ class StatsMonitor:
                         f"Increase: {time_increase:.2f}s"
                     )
                     self.last_alert_time[alert_type] = current_time
-            
+
             # Check for total request time spike
             prev_total = self.previous_stats.get("avg_total_request_seconds", 0)
             curr_total = stats.get("avg_total_request_seconds", 0)
             total_increase = curr_total - prev_total
-            
+
             if total_increase > self.thresholds["avg_total_time_spike"]:
                 alert_type = "avg_total_time_spike"
                 if self._should_alert(alert_type, current_time):
@@ -156,7 +157,7 @@ class StatsMonitor:
                         f"(queue wait + compilation)"
                     )
                     self.last_alert_time[alert_type] = current_time
-        
+
         # Check queue length
         queue_length = stats.get("current_queue_length", 0)
         if queue_length > self.thresholds["queue_length"]:

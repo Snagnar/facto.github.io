@@ -5,5 +5,4 @@ slowapi==0.1.9
 pydantic==2.5.3
 pydantic-settings==2.1.0
 pyyaml>=6.0
-# Note: dsl_compiler should be installed from the Factompiler directory
-# Install with: pip install -e /path/to/Factompiler
+factompile>=0.1.5
