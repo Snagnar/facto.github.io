@@ -297,8 +297,8 @@ def main():
     parser = argparse.ArgumentParser(description="Aggregate Facto backend statistics")
     parser.add_argument(
         "--nginx-config",
-        default="/etc/nginx/sites-available/facto.spokenrobot.com",
-        help="Path to nginx config file (default: /etc/nginx/sites-available/facto.spokenrobot.com)",
+        default="/etc/nginx/sites-available/facto.paul-mattes.de",
+        help="Path to nginx config file (default: /etc/nginx/sites-available/facto.paul-mattes.de)",
     )
     parser.add_argument(
         "--output",

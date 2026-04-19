@@ -304,8 +304,8 @@ def main():
     parser = argparse.ArgumentParser(description="Stress test Facto web compiler")
     parser.add_argument(
         "--url",
-        default="https://facto.spokenrobot.com:3000/compile/sync",
-        help="Compile endpoint URL (default: https://facto.spokenrobot.com:3000/compile/sync)",
+        default="https://facto.paul-mattes.de/compile/sync",
+        help="Compile endpoint URL (default: https://facto.paul-mattes.de/compile/sync)",
     )
     parser.add_argument(
         "--requests",

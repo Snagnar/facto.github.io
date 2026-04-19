@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # CORS - comma-separated list of allowed origins
     # In production, set FACTO_ALLOWED_ORIGINS to your actual frontend domain
     # e.g., "https://snagnar.github.io" or "https://your-domain.com"
-    allowed_origins: str = "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,https://facto.spokenrobot.com:3000,https://snagnar.github.io"
+    allowed_origins: str = "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,https://facto.paul-mattes.de,https://snagnar.github.io"
 
     # Rate limiting
     rate_limit_requests: int = 20  # requests per window

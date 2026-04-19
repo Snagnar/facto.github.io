@@ -11,8 +11,8 @@ const LOCAL_DEV = window.location.hostname === 'localhost' ||
 
 // Configure backend URL based on LOCAL_DEV
 if (!LOCAL_DEV) {
-    // Production: facto.spokenrobot.com:3000
-    window.FACTO_BACKEND_URL = 'https://facto.spokenrobot.com:3000';
+    // Production: facto.paul-mattes.de
+    window.FACTO_BACKEND_URL = 'https://facto.paul-mattes.de';
 } else {
     // Local development: use localhost:8000
     window.FACTO_BACKEND_URL = 'http://localhost:8000';
